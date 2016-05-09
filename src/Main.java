@@ -1,6 +1,8 @@
 import org.jnativehook.GlobalScreen;
 import org.jnativehook.NativeHookException;
 
+import java.io.FileNotFoundException;
+
 public class Main {
 
     public static void main(String[] args) {
@@ -13,14 +15,18 @@ public class Main {
             System.exit(1);
         }
 
-        GlobalScreen.addNativeKeyListener(new KeyboardListener());
+        try {
+            GlobalScreen.addNativeKeyListener(new KeyboardListener());
+        } catch (FileNotFoundException e) {
+            System.out.println("not found key output file");
+        }
 
         // Construct the example object.
-        MouseListener example = new MouseListener();
+        //MouseListener example = new MouseListener();
 
         // Add the appropriate listeners.
-        GlobalScreen.addNativeMouseListener(example);
-        GlobalScreen.addNativeMouseMotionListener(example);
+       // GlobalScreen.addNativeMouseListener(example);
+       // GlobalScreen.addNativeMouseMotionListener(example);
     }
 
 }
