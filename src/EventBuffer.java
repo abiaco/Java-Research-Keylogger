@@ -1,15 +1,12 @@
 import java.io.*;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Files;
-import java.util.Arrays;
+import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Objects;
 
 public class EventBuffer {
     PrintWriter file;
+    Thread t;
     final static String logName = "log_" + new Date();
-    final static int BUFFER_SIZE = 2000;
-    final static int safeIndex = 1950;
+    final static int BUFFER_SIZE = 11;
     private Object arrayLock;
     int readBufIndex;
     Event[] readBuffer;
@@ -21,62 +18,46 @@ public class EventBuffer {
         this.writeBuffer = new Event[BUFFER_SIZE];
         file = new PrintWriter(this.logName);
         readBufIndex = -1;
+        t = new Thread(() -> {
+            writeToFile();
+        });
     }
 
-    public EventBuffer(String filename) throws FileNotFoundException {
+    public EventBuffer(String filename){
         arrayLock = new Object();
         this.readBuffer = new Event[BUFFER_SIZE];
         this.writeBuffer = new Event[BUFFER_SIZE];
         Date date = new Date();
-        File f = new File("logs\\" + filename + "_" + date);
-        if(!f.exists() && !f.isDirectory())
-        {
-            try {
-                f.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        try {
+            String name = "logs\\" + filename + new SimpleDateFormat("MM_dd_yyyy_hh-mm-ss").format(date)+".txt";
+            file = new PrintWriter(name, "UTF-8");
+        }catch (Exception e){
+            e.printStackTrace();
         }
-
-        file = new PrintWriter(f);
+        t = new Thread(() -> {
+            writeToFile();
+        });
         readBufIndex = -1;
     }
 
-    boolean checkEmptyDurations(){
-        for (int i = readBufIndex; i > readBufIndex - 10; i--){
-            if (readBuffer[i].type == "key_pressed" && readBuffer[i].getDuration() == 0) return false;
-        }
-        return true;
-    }
     public void read(Event e){
-        if (readBufIndex >= safeIndex){
-            if (readBufIndex == BUFFER_SIZE - 1){
+        readBufIndex++;
+        readBuffer[readBufIndex] = e;
+        if (readBufIndex > BUFFER_SIZE - 2) {
+            synchronized (readBuffer) {
                 copyToWriteBuffer();
-                new Thread(() -> writeToFile()).start();
             }
-            else if(checkEmptyDurations() && e.getType() == "key_pressed") {
-                copyToWriteBuffer();
-                new Thread(() -> writeToFile()).start();
-            }
+            t.start();
         }
-        readBuffer[++readBufIndex] = e;
+
     }
 
-    public void updatePressed(Event e){
-        for (int i = readBufIndex; i >= 0; i--){
-            if (readBuffer[i].item == e.item && readBuffer[i].type == "key_pressed"){
-                readBuffer[i].setLinkedEvent(e);
-                readBuffer[i].setDuration(e.getTimeStamp() - readBuffer[i].getTimeStamp());
-                break;
-            }
-        }
-    }
 
     public void copyToWriteBuffer() {
-        synchronized (arrayLock) {
-            for (int i = 0; i < readBufIndex; i++) {
-                this.writeBuffer[i] = new Event(this.readBuffer[i]);
-            }
+        for (int i = 0; i < readBufIndex; i++) {
+            this.writeBuffer[i] = new Event(this.readBuffer[i]);
+        }
+        synchronized (readBuffer){
             this.readBuffer = new Event[BUFFER_SIZE];
             this.readBufIndex = -1;
         }
@@ -91,9 +72,23 @@ public class EventBuffer {
 
     public void clearBuffer(){
         copyToWriteBuffer();
-        new Thread(() -> writeToFile()).start();
+        try {
+            t.start();
+            t.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        System.out.println("closing file");
         file.flush();
         file.close();
+        System.out.println("closed");
+        System.exit(0);
     }
 
+    void printReadBuffer(){
+        for (int i = 0 ; i < readBufIndex ; i++){
+            System.out.println(readBuffer[i]);
+        }
+    }
 }
