@@ -11,6 +11,13 @@ public class Event {
 
     }
 
+    public Event(int item, String type, long timeStamp){
+        this.item = Integer.toString(item);
+        this.type = type;
+        this.timeStamp = timeStamp;
+
+    }
+
     public Event(){
         this.item="";
         this.type="None";

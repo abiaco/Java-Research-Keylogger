@@ -14,6 +14,7 @@ public class KeyboardListener implements NativeKeyListener{
     public EventBuffer buffer;
     PrintWriter file;
 
+
     public KeyboardListener() throws FileNotFoundException {
         this.buffer = new EventBuffer("KeyLog");
         Date date = new Date();
@@ -24,8 +25,10 @@ public class KeyboardListener implements NativeKeyListener{
             e.printStackTrace();
         }
     }
-    public KeyboardListener(EventBuffer b){
-        this.buffer = b;
+
+    public KeyboardListener(PrintWriter file) throws FileNotFoundException {
+        this.buffer = new EventBuffer("KeyLog");
+        this.file = file;
     }
     public void nativeKeyPressed(NativeKeyEvent e) {
         Event event = new Event(NativeKeyEvent.getKeyText(e.getKeyCode()), "key_pressed",  e.getWhen());
@@ -37,8 +40,7 @@ public class KeyboardListener implements NativeKeyListener{
             try {
                 GlobalScreen.unregisterNativeHook();
                 //buffer.clearBuffer();
-                file.flush();
-                file.close();
+                System.out.println("unregistered hook");
 
             }
             catch (NativeHookException ex){
